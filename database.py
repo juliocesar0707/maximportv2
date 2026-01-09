@@ -1,45 +1,133 @@
 # database.py
 from sqlalchemy import create_engine, text
 import config
+import urllib.parse
+import pyodbc
 
 # Variável global da conexão
 engine = None
 
+def detectar_driver():
+    """Identifica o driver ODBC disponível"""
+    try:
+        drivers = [d for d in pyodbc.drivers() if 'SQL Server' in d]
+    except:
+        return 'SQL Server'
+    
+    preferencias = [
+        'ODBC Driver 18 for SQL Server',
+        'ODBC Driver 17 for SQL Server',
+        'ODBC Driver 13 for SQL Server',
+        'SQL Server Native Client 11.0',
+        'SQL Server'
+    ]
+    
+    for pref in preferencias:
+        if pref in drivers:
+            return pref
+    
+    if drivers: return drivers[0]
+    return 'SQL Server'
+
+def get_connection_string(banco=None):
+    driver = detectar_driver()
+    db_target = banco if banco else config.DB_NAME
+    
+    params = urllib.parse.quote_plus(
+        f"DRIVER={{{driver}}};"
+        f"SERVER={config.DB_SERVER};"
+        f"DATABASE={db_target};"
+        f"UID={config.DB_USER};"
+        f"PWD={config.DB_PASS};"
+        f"TrustServerCertificate=yes;"
+    )
+    return f"mssql+pyodbc:///?odbc_connect={params}"
+
 def get_engine():
-    """Retorna a engine atual ou cria uma nova se não existir"""
     global engine
     if engine is None:
         reconectar()
     return engine
 
 def reconectar():
-    """Força a recriação da conexão com os dados atuais do config.py"""
     global engine
     try:
         if engine:
-            engine.dispose() # Fecha a anterior
-        
-        # Cria nova com os dados atuais do config
-        engine = create_engine(config.get_connection_string(), fast_executemany=True)
+            engine.dispose()
+        conn_str = get_connection_string()
+        engine = create_engine(conn_str, fast_executemany=True)
         print(f"Conectado ao banco: {config.DB_NAME} em {config.DB_SERVER}")
     except Exception as e:
         print(f"Erro ao configurar conexão: {e}")
+        raise e
+
+def listar_bancos_disponiveis(servidor):
+    """Lista bancos usando método híbrido de autenticação"""
+    driver = detectar_driver()
+    # Tenta SQL Auth primeiro, depois Windows Auth
+    configs = [
+        f"UID={config.DB_USER};PWD={config.DB_PASS};TrustServerCertificate=yes;",
+        f"Trusted_Connection=yes;TrustServerCertificate=yes;"
+    ]
+    
+    for auth in configs:
+        try:
+            params = urllib.parse.quote_plus(f"DRIVER={{{driver}}};SERVER={servidor};DATABASE=master;{auth}")
+            eng = create_engine(f"mssql+pyodbc:///?odbc_connect={params}")
+            with eng.connect() as conn:
+                result = conn.execute(text("SELECT name FROM sys.databases WHERE name NOT IN ('master','tempdb','model','msdb') AND state_desc='ONLINE' ORDER BY name"))
+                return [row[0] for row in result]
+        except:
+            continue
+    raise Exception("Não foi possível listar os bancos (Falha de Login).")
 
 def executar_comando(sql_cmd):
-    """Executa comandos SQL diretos (Delete, Update, Insert manual)"""
     with get_engine().begin() as conn:
         conn.execute(text(sql_cmd))
 
 def toggle_constraints(enable=True):
-    acao = "CHECK" if enable else "NOCHECK"
-    executar_comando(f"EXEC sp_msforeachtable 'ALTER TABLE ? {acao} CONSTRAINT ALL'")
+    """
+    Ativa/Desativa verificações de Chave Estrangeira e GATILHOS (Triggers).
+    Essencial para evitar o erro 'fk_logAcesso'.
+    """
+    # Lista das tabelas que vamos mexer
+    tabelas_alvo = ['cliente', 'produto', 'produto_empresa', 'financeiro', 'fornecedor', 'ncm', 'proncm']
+    
+    if enable:
+        print("🔒 Reativando GATILHOS e CHECAGENS...")
+        cmd_fk = "CHECK CONSTRAINT ALL"
+        cmd_tr = "ENABLE TRIGGER ALL"
+    else:
+        print("🔓 Desativando GATILHOS (Triggers) e FKs para importação...")
+        cmd_fk = "NOCHECK CONSTRAINT ALL"
+        cmd_tr = "DISABLE TRIGGER ALL"
+
+    with get_engine().begin() as conn:
+        # 1. Tenta o método geral (mais rápido)
+        try:
+            conn.execute(text(f"EXEC sp_msforeachtable 'ALTER TABLE ? {cmd_fk}'"))
+            conn.execute(text(f"EXEC sp_msforeachtable 'ALTER TABLE ? {cmd_tr}'"))
+        except Exception as e:
+            print(f"Aviso no método geral: {e}")
+
+        # 2. Reforço: Garante desativação nas tabelas críticas individualmente
+        for tab in tabelas_alvo:
+            try:
+                conn.execute(text(f"ALTER TABLE {tab} {cmd_fk}"))
+                conn.execute(text(f"ALTER TABLE {tab} {cmd_tr}")) # Aqui mata o erro do logAcesso
+                print(f"   -> Proteções alteradas para: {tab}")
+            except Exception as e:
+                # Se a tabela não existir, apenas ignora
+                pass
 
 def limpar_tabela(nome_tabela, reset_identity=False):
     try:
         executar_comando(f"DELETE FROM {nome_tabela}")
         if reset_identity:
-            executar_comando(f"DBCC CHECKIDENT ('{nome_tabela}', RESEED, 0)")
-        print(f"Tabela {nome_tabela} limpa com sucesso.")
+            try:
+                executar_comando(f"DBCC CHECKIDENT ('{nome_tabela}', RESEED, 0)")
+            except: pass
+        print(f"Tabela {nome_tabela} limpa.")
     except Exception as e:
         print(f"Erro ao limpar {nome_tabela}: {e}")
 

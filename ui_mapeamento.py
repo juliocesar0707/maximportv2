@@ -7,7 +7,7 @@ class DialogoMapeamento(ttk.Toplevel):
     def __init__(self, parent, colunas_excel, tipo_importacao="PRODUTO"):
         super().__init__(parent)
         self.title(f"Mapeamento de Colunas - {tipo_importacao}")
-        self.geometry("750x650")
+        self.geometry("800x700")
         self.resultado = None 
         
         ttk.Label(self, text="Relacione as colunas para importação", font=("Segoe UI", 14, "bold"), bootstyle="primary").pack(pady=15)
@@ -24,14 +24,18 @@ class DialogoMapeamento(ttk.Toplevel):
                 'proId': 'ID Produto (Se numérico = Fixo, Se letra = Automático)',
                 'zzz_proCodigo': 'Referência / Código de Barras',
                 'proDescricao': 'Descrição do Produto',
+                'zzz_proCodigoNcm': 'NCM (Vai p/ tabela proncm e vincula ID)',
+                
+                # Campos Fiscais (Vão para produto_empresa)
+                'proCodcst2': 'CST (Situação Tributária) -> Tab. Empresa',
+                'proCodCSOSN': 'CSOSN (Simples Nacional) -> Tab. Empresa',
                 
                 # Campos exclusivos da tabela PRODUTO_EMPRESA
                 'proUn': 'Unidade (UN, KG, CX) -> Tab. Empresa',
                 'zzz_proCusto': 'Preço de Custo -> Tab. Empresa',
                 'zzz_proVenda': 'Preço de Venda -> Tab. Empresa',
                 'proEstoqueAtual': 'Estoque Atual -> Tab. Empresa',
-                'zzz_proEstoqueMin': 'Estoque Mínimo -> Tab. Empresa',
-                'zzz_proCodigoNcm': 'NCM (Classificação Fiscal)'
+                'zzz_proEstoqueMin': 'Estoque Mínimo -> Tab. Empresa'
             }
         elif tipo_importacao == "CLIENTE":
             self.campos_sistema = {
@@ -66,6 +70,7 @@ class DialogoMapeamento(ttk.Toplevel):
                 nm_ex = str(col_excel).lower()
                 
                 match = False
+                # Regras Gerais
                 if campo_db == 'zzz_proCodigo' and nm_ex in ['referencia', 'ref', 'codigo', 'barras', 'cod']: match = True
                 if campo_db == 'proDescricao' and nm_ex in ['nome', 'descricao', 'descrição', 'produto']: match = True
                 if 'custo' in nm_db and 'custo' in nm_ex: match = True
@@ -74,6 +79,10 @@ class DialogoMapeamento(ttk.Toplevel):
                 if 'ncm' in nm_db and 'ncm' in nm_ex: match = True
                 if 'estoque' in nm_db and 'estoque' in nm_ex: match = True
                 if campo_db == 'proId' and nm_ex in ['id', 'código', 'codigo', 'cod']: match = True
+
+                # Regras Fiscais (Novas)
+                if campo_db == 'proCodcst2' and ('cst' in nm_ex or 'tribut' in nm_ex): match = True
+                if campo_db == 'proCodCSOSN' and 'csosn' in nm_ex: match = True
 
                 if match:
                     cbox.set(col_excel)
