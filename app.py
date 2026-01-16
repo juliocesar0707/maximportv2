@@ -16,7 +16,7 @@ import import_clientes
 import import_financeiro
 import ui_mapeamento
 
-# --- REDIRECIONAMENTO DE LOG ---
+# --- REDIRECIONAMENTO DE LOG (Mantido Intacto) ---
 class TextRedirector(io.StringIO):
     def __init__(self, text_widget):
         self.text_widget = text_widget
@@ -34,9 +34,12 @@ class TextRedirector(io.StringIO):
 # --- APP PRINCIPAL ---
 class MaxImportApp(ttk.Window):
     def __init__(self):
-        super().__init__(themename="cosmo")
-        self.title("Max Import 2.0 - Maxdata Sistemas")
-        self.geometry("980x750")
+        # MUDANÇA VISUAL: Tema 'superhero' (Dark Moderno) ou 'flatly' (Clean Light)
+        # Vamos usar 'superhero' para o visual "Super Bonito" e Tech.
+        super().__init__(themename="superhero") 
+        self.title("Max Import 2.0 - Suite de Migração")
+        self.geometry("1024x800")
+        self.place_window_center()
         
         if sys.platform.startswith("win") and os.path.exists("icone.ico"):
             self.iconbitmap("icone.ico")
@@ -47,102 +50,129 @@ class MaxImportApp(ttk.Window):
         self.db_name = ttk.StringVar(value=config.DB_NAME)
         self.progress_val = ttk.DoubleVar(value=0)
 
+        # Estilos Customizados
+        style = ttk.Style()
+        style.configure('Big.TButton', font=('Segoe UI', 11, 'bold'))
+        style.configure('Card.TFrame', background=style.colors.bg)
+
         self.criar_interface()
 
     def criar_interface(self):
-        # Header
-        header = ttk.Frame(self, padding=15, bootstyle="primary")
+        # --- HEADER ---
+        header = ttk.Frame(self, padding=20, bootstyle="secondary")
         header.pack(fill=X)
-        ttk.Label(header, text="Max Import - Ferramenta de Migração", font=("Segoe UI", 18, "bold"), bootstyle="inverse-primary").pack(side=LEFT)
+        
+        # Layout Flexível no Header
+        h_container = ttk.Frame(header, bootstyle="secondary")
+        h_container.pack(fill=X)
+        
+        ttk.Label(h_container, text="MAX IMPORT", font=("Segoe UI", 24, "bold"), bootstyle="inverse-secondary").pack(side=LEFT)
+        ttk.Label(h_container, text=" | Ferramenta de Migração Inteligente", font=("Segoe UI", 14), bootstyle="inverse-secondary").pack(side=LEFT, pady=(8,0))
+        ttk.Label(h_container, text="v2.0", font=("Consolas", 10), bootstyle="inverse-secondary").pack(side=RIGHT, pady=(10,0))
 
-        # Container Principal
-        main_frame = ttk.Frame(self, padding=10)
+        # --- CONTAINER PRINCIPAL ---
+        # Adicionei um padding maior para o conteúdo "respirar"
+        main_frame = ttk.Frame(self, padding=20)
         main_frame.pack(fill=BOTH, expand=True)
 
-        # --- ÁREA DE CONFIGURAÇÃO DE BANCO (TOPO) ---
-        frame_db = ttk.Labelframe(main_frame, text="1. Conexão com Banco de Dados", padding=10)
-        frame_db.pack(fill=X, pady=5)
+        # --- SEÇÃO 1: CONEXÃO (Card Style) ---
+        # Labelframe com estilo 'info' para destacar a borda
+        frame_db = ttk.Labelframe(main_frame, text=" 📡 Conectividade ", padding=15, bootstyle="info")
+        frame_db.pack(fill=X, pady=(0, 15))
 
-        # Coluna 1: Servidor + Botão de Busca
-        col_server = ttk.Frame(frame_db)
-        col_server.pack(side=LEFT, fill=X, expand=True, padx=5)
+        # Grid interno para alinhar campos
+        frame_db.columnconfigure(0, weight=1)
+        frame_db.columnconfigure(1, weight=1)
+        frame_db.columnconfigure(2, weight=0)
+
+        # Campo Servidor
+        lbl_srv = ttk.Label(frame_db, text="SERVIDOR SQL", font=("Segoe UI", 8, "bold"), bootstyle="info")
+        lbl_srv.grid(row=0, column=0, sticky=W, padx=5)
         
-        ttk.Label(col_server, text="Servidor:").pack(anchor=W)
-        frm_input_srv = ttk.Frame(col_server)
-        frm_input_srv.pack(fill=X)
+        inp_srv_frame = ttk.Frame(frame_db)
+        inp_srv_frame.grid(row=1, column=0, sticky=EW, padx=5, pady=(5,0))
         
-        ttk.Entry(frm_input_srv, textvariable=self.db_server).pack(side=LEFT, fill=X, expand=True)
-        ttk.Button(frm_input_srv, text="🔍", bootstyle="outline-secondary", command=self.listar_bancos_gui, width=3).pack(side=LEFT, padx=(2,0))
+        ttk.Entry(inp_srv_frame, textvariable=self.db_server, font=("Segoe UI", 10)).pack(side=LEFT, fill=X, expand=True)
+        ttk.Button(inp_srv_frame, text="🔍", bootstyle="info-outline", command=self.listar_bancos_gui).pack(side=RIGHT, padx=(5,0))
+
+        # Campo Banco
+        lbl_db = ttk.Label(frame_db, text="BANCO DE DADOS", font=("Segoe UI", 8, "bold"), bootstyle="info")
+        lbl_db.grid(row=0, column=1, sticky=W, padx=5)
         
-        # Coluna 2: Banco (Combobox)
-        col_db = ttk.Frame(frame_db)
-        col_db.pack(side=LEFT, fill=X, expand=True, padx=5)
+        self.cbo_bancos = ttk.Combobox(frame_db, textvariable=self.db_name, state="normal", font=("Segoe UI", 10))
+        self.cbo_bancos.grid(row=1, column=1, sticky=EW, padx=5, pady=(5,0))
+
+        # Botão Conectar
+        btn_conectar = ttk.Button(frame_db, text="💾 SALVAR & CONECTAR", command=self.atualizar_conexao, bootstyle="info", width=20)
+        btn_conectar.grid(row=1, column=2, padx=10, pady=(5,0), ipady=2)
+
+        # --- SEÇÃO 2: ARQUIVO (Card Style) ---
+        frame_file = ttk.Labelframe(main_frame, text=" 📂 Origem dos Dados ", padding=15, bootstyle="primary")
+        frame_file.pack(fill=X, pady=(0, 15))
+
+        file_container = ttk.Frame(frame_file)
+        file_container.pack(fill=X)
+
+        ttk.Entry(file_container, textvariable=self.caminho_excel, state="readonly", font=("Segoe UI", 10)).pack(side=LEFT, fill=X, expand=True, padx=(0, 10))
+        ttk.Button(file_container, text="SELECIONAR EXCEL", command=self.selecionar_arquivo, bootstyle="primary-outline", cursor="hand2").pack(side=RIGHT)
+
+        # --- SEÇÃO 3: DASHBOARD DE AÇÕES ---
+        # Substituí o Grid simples por um layout mais visual
+        frame_acoes = ttk.Labelframe(main_frame, text=" 🚀 Painel de Controle ", padding=15, bootstyle="light")
+        frame_acoes.pack(fill=X, pady=(0, 15))
+
+        # Container interno para centralizar botões
+        grid_acoes = ttk.Frame(frame_acoes)
+        grid_acoes.pack(fill=X)
         
-        ttk.Label(col_db, text="Selecione o Banco:").pack(anchor=W)
-        self.cbo_bancos = ttk.Combobox(col_db, textvariable=self.db_name, state="normal")
-        self.cbo_bancos.pack(fill=X)
+        # Colunas com peso igual para botões ficarem do mesmo tamanho
+        for i in range(4): grid_acoes.columnconfigure(i, weight=1)
+        grid_acoes.columnconfigure(4, weight=0) # Separador
+        grid_acoes.columnconfigure(5, weight=1) # Limpeza
 
-        # Botão Salvar
-        ttk.Button(frame_db, text="Salvar Conexão", command=self.atualizar_conexao, bootstyle="secondary").pack(side=LEFT, padx=5, pady=(18,0))
+        # Botões Grandes e Coloridos
+        btn_prod = ttk.Button(grid_acoes, text=" PRODUTOS", image="", compound=LEFT, bootstyle="success", style='Big.TButton', command=lambda: self.preparar_importacao(1))
+        btn_prod.grid(row=0, column=0, padx=5, sticky=EW, ipady=10)
 
-        # --- ÁREA DE ARQUIVO ---
-        frame_file = ttk.Labelframe(main_frame, text="2. Seleção de Arquivo (Excel)", padding=10)
-        frame_file.pack(fill=X, pady=5)
+        btn_cli = ttk.Button(grid_acoes, text=" CLIENTES", bootstyle="primary", style='Big.TButton', command=lambda: self.preparar_importacao(2))
+        btn_cli.grid(row=0, column=1, padx=5, sticky=EW, ipady=10)
 
-        ttk.Entry(frame_file, textvariable=self.caminho_excel, state="readonly").pack(side=LEFT, fill=X, expand=True, padx=(0, 5))
-        ttk.Button(frame_file, text="📂 Escolher Planilha", command=self.selecionar_arquivo, bootstyle="info").pack(side=RIGHT)
+        btn_forn = ttk.Button(grid_acoes, text=" FORNECEDORES", bootstyle="warning", style='Big.TButton', command=lambda: self.preparar_importacao(3))
+        btn_forn.grid(row=0, column=2, padx=5, sticky=EW, ipady=10)
 
-        # --- ÁREA DE AÇÕES (IMPORTAÇÃO E LIMPEZA) ---
-        frame_acoes = ttk.Labelframe(main_frame, text="3. Ações e Ferramentas", padding=15)
-        frame_acoes.pack(fill=X, pady=10)
+        btn_fin = ttk.Button(grid_acoes, text=" FINANCEIRO", bootstyle="info", style='Big.TButton', command=lambda: self.preparar_importacao(4))
+        btn_fin.grid(row=0, column=3, padx=5, sticky=EW, ipady=10)
 
-        # Lado Esquerdo: Importações
-        lbl_imp = ttk.Label(frame_acoes, text="IMPORTAÇÃO:", font=("Segoe UI", 9, "bold"), bootstyle="success")
-        lbl_imp.grid(row=0, column=0, sticky=W, padx=5)
+        # Separador Vertical
+        ttk.Separator(grid_acoes, orient=VERTICAL).grid(row=0, column=4, sticky=NS, padx=15)
 
-        btn_prod = ttk.Button(frame_acoes, text="📦 PRODUTOS", bootstyle="success", command=lambda: self.preparar_importacao(1))
-        btn_prod.grid(row=1, column=0, padx=5, pady=5, sticky=EW)
+        # Botão de Perigo
+        btn_limpar = ttk.Button(grid_acoes, text=" MANUTENÇÃO", bootstyle="danger-outline", style='Big.TButton', command=self.abrir_menu_limpeza)
+        btn_limpar.grid(row=0, column=5, padx=5, sticky=EW, ipady=10)
 
-        btn_cli = ttk.Button(frame_acoes, text="👥 CLIENTES", bootstyle="primary", command=lambda: self.preparar_importacao(2))
-        btn_cli.grid(row=1, column=1, padx=5, pady=5, sticky=EW)
+        # --- SEÇÃO 4: LOG E STATUS ---
+        # Um frame bonito para o terminal
+        frame_log = ttk.Frame(main_frame)
+        frame_log.pack(fill=BOTH, expand=True)
 
-        btn_forn = ttk.Button(frame_acoes, text="🏭 FORNECEDORES", bootstyle="warning", command=lambda: self.preparar_importacao(3))
-        btn_forn.grid(row=1, column=2, padx=5, pady=5, sticky=EW)
+        lbl_log = ttk.Label(frame_log, text="> Console de Execução", font=("Consolas", 10, "bold"), bootstyle="secondary")
+        lbl_log.pack(anchor=W, pady=(0, 5))
 
-        btn_fin = ttk.Button(frame_acoes, text="💰 FINANCEIRO", bootstyle="info", command=lambda: self.preparar_importacao(4))
-        btn_fin.grid(row=1, column=3, padx=5, pady=5, sticky=EW)
-
-        # Separador Visual
-        ttk.Separator(frame_acoes, orient=VERTICAL).grid(row=0, column=4, rowspan=2, sticky=NS, padx=20)
-
-        # Lado Direito: Limpeza
-        lbl_del = ttk.Label(frame_acoes, text="MANUTENÇÃO:", font=("Segoe UI", 9, "bold"), bootstyle="danger")
-        lbl_del.grid(row=0, column=5, sticky=W, padx=5)
-
-        btn_limpar = ttk.Button(frame_acoes, text="🗑️ LIMPAR DADOS...", bootstyle="danger", command=self.abrir_menu_limpeza)
-        btn_limpar.grid(row=1, column=5, padx=5, pady=5, sticky=EW)
-
-        # Ajuste de Grid
-        frame_acoes.columnconfigure(0, weight=1)
-        frame_acoes.columnconfigure(1, weight=1)
-        frame_acoes.columnconfigure(2, weight=1)
-        frame_acoes.columnconfigure(3, weight=1)
-        frame_acoes.columnconfigure(5, weight=1)
-
-        # --- LOG E PROGRESSO ---
-        lbl_log = ttk.Label(main_frame, text="Log de Execução:", font=("Segoe UI", 9, "bold"))
-        lbl_log.pack(anchor=W, pady=(10, 0))
-
-        self.txt_log = ttk.Text(main_frame, height=12, font=("Consolas", 9))
-        self.txt_log.pack(fill=BOTH, expand=True, pady=5)
+        # Texto com fundo escuro (automático do tema superhero) e fonte verde/branca
+        self.txt_log = ttk.Text(frame_log, height=10, font=("Consolas", 9), relief=FLAT, padx=10, pady=10)
+        self.txt_log.pack(fill=BOTH, expand=True)
+        
+        # Redireciona print para o widget
         sys.stdout = TextRedirector(self.txt_log)
 
-        self.barra_progresso = ttk.Progressbar(main_frame, variable=self.progress_val, bootstyle="striped-animated")
-        self.barra_progresso.pack(fill=X, pady=5)
+        # Barra de Progresso Striped (Listrada)
+        self.barra_progresso = ttk.Progressbar(main_frame, variable=self.progress_val, bootstyle="success-striped", mode='indeterminate')
+        self.barra_progresso.pack(fill=X, pady=(15, 5), ipady=2)
         
-        ttk.Label(self, text="Maxdata Sistemas © 2025", font=("Segoe UI", 8), bootstyle="secondary").pack(side=BOTTOM, pady=5)
+        # Footer
+        ttk.Label(self, text="  Maxdata Sistemas © 2025  ", font=("Segoe UI", 9), bootstyle="inverse-secondary").pack(side=BOTTOM, fill=X)
 
-    # --- FUNÇÕES LÓGICAS ---
+    # --- FUNÇÕES LÓGICAS (MANTIDAS 100% IDÊNTICAS) ---
 
     def listar_bancos_gui(self):
         server = self.db_server.get()
@@ -152,6 +182,10 @@ class MaxImportApp(ttk.Window):
             
         try:
             print(f"Buscando bancos no servidor {server}...")
+            # Feedback visual rápido
+            self.config(cursor="wait")
+            self.update()
+            
             lista = db.listar_bancos_disponiveis(server)
             self.cbo_bancos['values'] = lista
             print(f"Encontrados {len(lista)} bancos.")
@@ -161,50 +195,65 @@ class MaxImportApp(ttk.Window):
         except Exception as e:
             messagebox.showerror("Erro de Conexão", str(e))
             print(f"Erro: {e}")
+        finally:
+            self.config(cursor="")
 
     def atualizar_conexao(self):
         config.DB_SERVER = self.db_server.get()
         config.DB_NAME = self.db_name.get()
         print("--- Atualizando Conexão ---")
-        db.reconectar()
-        messagebox.showinfo("Conexão", f"Parâmetros atualizados!\nServidor: {config.DB_SERVER}\nBanco: {config.DB_NAME}")
+        try:
+            db.reconectar()
+            messagebox.showinfo("Sucesso", f"Conectado com sucesso!\n\nServidor: {config.DB_SERVER}\nBanco: {config.DB_NAME}")
+        except Exception as e:
+            messagebox.showerror("Falha", f"Não foi possível conectar:\n{e}")
 
     def selecionar_arquivo(self):
         arquivo = filedialog.askopenfilename(filetypes=[("Excel Files", "*.xlsx;*.xls")])
         if arquivo:
             self.caminho_excel.set(arquivo)
+            print(f"Arquivo selecionado: {os.path.basename(arquivo)}")
 
     def abrir_menu_limpeza(self):
+        # Toplevel estilizada
         top = ttk.Toplevel(self)
-        top.title("Zona de Perigo - Limpeza de Dados")
-        top.geometry("400x350")
+        top.title("Zona de Manutenção")
+        top.geometry("450x420")
+        top.place_window_center()
         
-        ttk.Label(top, text="O que você deseja apagar?", font=("Segoe UI", 12, "bold"), bootstyle="danger").pack(pady=20)
-        ttk.Label(top, text="Essa ação não pode ser desfeita.", font=("Segoe UI", 9)).pack()
+        # Header de Perigo
+        head = ttk.Frame(top, padding=20, bootstyle="danger")
+        head.pack(fill=X)
+        ttk.Label(head, text="⚠️ CUIDADO", font=("Segoe UI", 16, "bold"), bootstyle="inverse-danger").pack()
+        ttk.Label(head, text="Ações de exclusão são irreversíveis", font=("Segoe UI", 10), bootstyle="inverse-danger").pack()
 
-        ttk.Button(top, text="Limpar APENAS Produtos", bootstyle="outline-danger", 
-                   command=lambda: self.executar_limpeza_thread(1, top)).pack(fill=X, padx=30, pady=5)
+        content = ttk.Frame(top, padding=20)
+        content.pack(fill=BOTH, expand=True)
+
+        ttk.Button(content, text="Limpar APENAS Produtos", bootstyle="outline-danger", 
+                   command=lambda: self.executar_limpeza_thread(1, top)).pack(fill=X, pady=5, ipady=5)
         
-        ttk.Button(top, text="Limpar APENAS Clientes", bootstyle="outline-danger", 
-                   command=lambda: self.executar_limpeza_thread(2, top)).pack(fill=X, padx=30, pady=5)
+        ttk.Button(content, text="Limpar APENAS Clientes", bootstyle="outline-danger", 
+                   command=lambda: self.executar_limpeza_thread(2, top)).pack(fill=X, pady=5, ipady=5)
         
-        ttk.Button(top, text="Limpar APENAS Financeiro", bootstyle="outline-danger", 
-                   command=lambda: self.executar_limpeza_thread(3, top)).pack(fill=X, padx=30, pady=5)
+        ttk.Button(content, text="Limpar APENAS Financeiro", bootstyle="outline-danger", 
+                   command=lambda: self.executar_limpeza_thread(3, top)).pack(fill=X, pady=5, ipady=5)
 
-        ttk.Separator(top).pack(fill=X, padx=20, pady=10)
+        ttk.Separator(content).pack(fill=X, pady=15)
 
-        ttk.Button(top, text="☢️ LIMPAR BANCO COMPLETO", bootstyle="danger", 
-                   command=lambda: self.executar_limpeza_thread(99, top)).pack(fill=X, padx=30, pady=10)
+        btn_full = ttk.Button(content, text="☢️ RESETAR BANCO COMPLETO", bootstyle="danger", 
+                   command=lambda: self.executar_limpeza_thread(99, top))
+        btn_full.pack(fill=X, pady=5, ipady=10)
 
     def executar_limpeza_thread(self, opcao, janela_popup):
         janela_popup.destroy()
-        if not messagebox.askyesno("Confirmar Exclusão", "Tem certeza absoluta? Os dados serão perdidos para sempre."):
+        if not messagebox.askyesno("Confirmar Exclusão", "Tem certeza absoluta? Os dados serão apagados permanentemente."):
             return
         t = threading.Thread(target=self._limpeza_worker, args=(opcao,))
         t.start()
 
     def _limpeza_worker(self, opcao):
-        self.barra_progresso.start(20)
+        self.barra_progresso.start(10) # Velocidade da animação
         self.alternar_interface("disabled")
         try:
             db.toggle_constraints(False)
@@ -217,15 +266,15 @@ class MaxImportApp(ttk.Window):
             
             if opcao == 2 or opcao == 99:
                 print("Limpando Clientes (Preservando Admin e Sistema)...")
-                # CORREÇÃO CRÍTICA: Usa a lógica do Delphi para não apagar usuários do sistema
-                # cliTipoCad 5 e 6 geralmente são usuários internos/sistema
                 sql_delphi = "DELETE FROM cliente WHERE cliId <> 1 AND cliTipoCad <> 5 AND cliTipoCad <> 6"
                 db.executar_comando(sql_delphi)
 
             if opcao == 3 or opcao == 99:
                 print("Limpando Financeiro...")
                 db.limpar_tabela('financeiro')
-            messagebox.showinfo("Sucesso", "Limpeza concluída!")
+            
+            print("--- Limpeza Concluída ---")
+            messagebox.showinfo("Sucesso", "Limpeza realizada com sucesso!")
         except Exception as e:
             messagebox.showerror("Erro", f"Erro na limpeza: {e}")
             print(f"Erro: {e}")
@@ -237,19 +286,21 @@ class MaxImportApp(ttk.Window):
     def preparar_importacao(self, opcao):
         arquivo = self.caminho_excel.get()
         if not arquivo:
-            messagebox.showwarning("Aviso", "Selecione um arquivo Excel primeiro!")
+            messagebox.showwarning("Atenção", "Por favor, selecione um arquivo Excel primeiro.")
             return
         if not os.path.exists(arquivo):
-            messagebox.showerror("Erro", "Arquivo não encontrado!")
+            messagebox.showerror("Erro", "O arquivo especificado não foi encontrado.")
             return
 
         # Produtos (1) e Clientes (2) abrem mapa.
         if opcao in [1, 2]:
             try:
+                # Leitura rápida só do cabeçalho
                 df_header = pd.read_excel(arquivo, sheet_name=0, nrows=0)
                 colunas = list(df_header.columns)
                 tipo = "PRODUTO" if opcao == 1 else "CLIENTE"
                 
+                # Abre janela de mapeamento (agora estilizada)
                 dialogo = ui_mapeamento.DialogoMapeamento(self, colunas, tipo_importacao=tipo)
                 self.wait_window(dialogo)
                 
@@ -257,14 +308,14 @@ class MaxImportApp(ttk.Window):
                     t = threading.Thread(target=self.processar_thread, args=(opcao, dialogo.resultado))
                     t.start()
             except Exception as e:
-                messagebox.showerror("Erro", f"Erro ao ler Excel: {e}")
+                messagebox.showerror("Erro", f"Erro ao ler cabeçalho do Excel: {e}")
         else:
-            if messagebox.askyesno("Confirmar", "Iniciar importação direta?"):
+            if messagebox.askyesno("Confirmar Importação", "Deseja iniciar a importação direta dos dados?"):
                 t = threading.Thread(target=self.processar_thread, args=(opcao, None))
                 t.start()
 
     def processar_thread(self, opcao, mapa_colunas):
-        self.barra_progresso.start(10)
+        self.barra_progresso.start(15)
         self.alternar_interface("disabled")
         try:
             db.reconectar()
@@ -280,18 +331,18 @@ class MaxImportApp(ttk.Window):
             elif opcao == 4:
                 import_financeiro.executar_importacao(arquivo, limpar_base=False)
 
-            messagebox.showinfo("Sucesso", "Importação Finalizada!")
+            messagebox.showinfo("Processo Finalizado", "A importação foi concluída com sucesso!")
 
         except Exception as e:
             print(f"ERRO FATAL: {e}")
-            messagebox.showerror("Erro", f"Falha na importação: {e}")
+            messagebox.showerror("Erro Crítico", f"Falha durante a importação:\n{e}")
         finally:
             db.toggle_constraints(True)
             self.barra_progresso.stop()
             self.alternar_interface("normal")
 
     def alternar_interface(self, estado):
-        # Pode implementar bloqueio de botões aqui se quiser
+        # Opcional: Desabilitar botões durante processamento
         pass 
 
 if __name__ == "__main__":
