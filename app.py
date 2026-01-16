@@ -212,11 +212,16 @@ class MaxImportApp(ttk.Window):
                 print("Limpando Produtos e Estoque...")
                 db.limpar_tabela('prolote', reset_identity=True)
                 db.executar_comando("DELETE FROM produto_empresa") 
-                db.executar_comando("DELETE FROM produto") 
+                db.executar_comando("DELETE FROM produto WHERE proId > 1") 
                 db.limpar_tabela('produtoUn', reset_identity=True)
+            
             if opcao == 2 or opcao == 99:
-                print("Limpando Clientes...")
-                db.executar_comando("DELETE FROM cliente WHERE cliId > 1")
+                print("Limpando Clientes (Preservando Admin e Sistema)...")
+                # CORREÇÃO CRÍTICA: Usa a lógica do Delphi para não apagar usuários do sistema
+                # cliTipoCad 5 e 6 geralmente são usuários internos/sistema
+                sql_delphi = "DELETE FROM cliente WHERE cliId <> 1 AND cliTipoCad <> 5 AND cliTipoCad <> 6"
+                db.executar_comando(sql_delphi)
+
             if opcao == 3 or opcao == 99:
                 print("Limpando Financeiro...")
                 db.limpar_tabela('financeiro')
@@ -269,7 +274,6 @@ class MaxImportApp(ttk.Window):
             if opcao == 1:
                 import_produtos.executar_importacao(arquivo, mapa_colunas, limpar_base=False)
             elif opcao == 2:
-                # CORREÇÃO AQUI: Passando mapa_colunas
                 import_clientes.executar_importacao(arquivo, mapa_colunas=mapa_colunas, is_fornecedor=False, limpar_base=False)
             elif opcao == 3:
                 import_clientes.executar_importacao(arquivo, mapa_colunas=None, is_fornecedor=True, limpar_base=False)
@@ -287,6 +291,7 @@ class MaxImportApp(ttk.Window):
             self.alternar_interface("normal")
 
     def alternar_interface(self, estado):
+        # Pode implementar bloqueio de botões aqui se quiser
         pass 
 
 if __name__ == "__main__":

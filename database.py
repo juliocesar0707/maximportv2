@@ -55,7 +55,8 @@ def reconectar():
         if engine:
             engine.dispose()
         conn_str = get_connection_string()
-        engine = create_engine(conn_str, fast_executemany=True)
+        # Removido fast_executemany temporariamente se estiver causando problemas com IDENTITY
+        engine = create_engine(conn_str) 
         print(f"Conectado ao banco: {config.DB_NAME} em {config.DB_SERVER}")
     except Exception as e:
         print(f"Erro ao configurar conexão: {e}")
@@ -64,7 +65,6 @@ def reconectar():
 def listar_bancos_disponiveis(servidor):
     """Lista bancos usando método híbrido de autenticação"""
     driver = detectar_driver()
-    # Tenta SQL Auth primeiro, depois Windows Auth
     configs = [
         f"UID={config.DB_USER};PWD={config.DB_PASS};TrustServerCertificate=yes;",
         f"Trusted_Connection=yes;TrustServerCertificate=yes;"
@@ -86,11 +86,6 @@ def executar_comando(sql_cmd):
         conn.execute(text(sql_cmd))
 
 def toggle_constraints(enable=True):
-    """
-    Ativa/Desativa verificações de Chave Estrangeira e GATILHOS (Triggers).
-    Essencial para evitar o erro 'fk_logAcesso'.
-    """
-    # Lista das tabelas que vamos mexer
     tabelas_alvo = ['cliente', 'produto', 'produto_empresa', 'financeiro', 'fornecedor', 'ncm', 'proncm']
     
     if enable:
@@ -103,22 +98,17 @@ def toggle_constraints(enable=True):
         cmd_tr = "DISABLE TRIGGER ALL"
 
     with get_engine().begin() as conn:
-        # 1. Tenta o método geral (mais rápido)
         try:
             conn.execute(text(f"EXEC sp_msforeachtable 'ALTER TABLE ? {cmd_fk}'"))
             conn.execute(text(f"EXEC sp_msforeachtable 'ALTER TABLE ? {cmd_tr}'"))
         except Exception as e:
             print(f"Aviso no método geral: {e}")
 
-        # 2. Reforço: Garante desativação nas tabelas críticas individualmente
         for tab in tabelas_alvo:
             try:
                 conn.execute(text(f"ALTER TABLE {tab} {cmd_fk}"))
-                conn.execute(text(f"ALTER TABLE {tab} {cmd_tr}")) # Aqui mata o erro do logAcesso
-                print(f"   -> Proteções alteradas para: {tab}")
-            except Exception as e:
-                # Se a tabela não existir, apenas ignora
-                pass
+                conn.execute(text(f"ALTER TABLE {tab} {cmd_tr}"))
+            except: pass
 
 def limpar_tabela(nome_tabela, reset_identity=False):
     try:
@@ -134,13 +124,16 @@ def limpar_tabela(nome_tabela, reset_identity=False):
 def inserir_bulk(df, nome_tabela, manter_id=True):
     if df.empty: return
 
+    # Usa .connect() com controle manual de transação para garantir IDENTITY_INSERT
     with get_engine().connect() as conn:
         transaction = conn.begin()
         try:
             if manter_id:
+                # O comando SET IDENTITY_INSERT precisa estar na mesma sessão
                 conn.execute(text(f"SET IDENTITY_INSERT {nome_tabela} ON"))
             
-            df.to_sql(nome_tabela, con=conn, if_exists='append', index=False, chunksize=500)
+            # chunksize ajustado para estabilidade
+            df.to_sql(nome_tabela, con=conn, if_exists='append', index=False, chunksize=200)
             
             if manter_id:
                 conn.execute(text(f"SET IDENTITY_INSERT {nome_tabela} OFF"))
@@ -149,4 +142,5 @@ def inserir_bulk(df, nome_tabela, manter_id=True):
             print(f"Importado: {len(df)} registros em {nome_tabela}")
         except Exception as e:
             transaction.rollback()
+            print(f"ERRO AO INSERIR EM {nome_tabela}: {e}")
             raise e
