@@ -123,6 +123,8 @@ def executar_importacao(caminho_excel, mapa_colunas=None, is_fornecedor=False, l
     
     df_cli['cliDatCad']  = datetime.datetime.now()
 
+    df_cli['cliempidcad'] = 1
+
     # Validação final: Remove linhas sem Nome
     df_cli = df_cli[df_cli['cliNome'] != '']
 
