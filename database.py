@@ -86,7 +86,7 @@ def executar_comando(sql_cmd):
         conn.execute(text(sql_cmd))
 
 def toggle_constraints(enable=True):
-    tabelas_alvo = ['cliente', 'produto', 'produto_empresa', 'financeiro', 'fornecedor', 'ncm', 'proncm']
+    tabelas_alvo = ['cliente', 'produto', 'produto_empresa', 'vendaPgto', 'fornecedor', 'ncm', 'proncm']
     
     if enable:
         print("🔒 Reativando GATILHOS e CHECAGENS...")

@@ -153,4 +153,29 @@ def executar_importacao(caminho_excel, mapa_colunas=None, is_fornecedor=False, l
     # Chama a função de inserção no banco
     db.inserir_bulk(df_cli, 'cliente', manter_id=manter_id_original)
     
+    # ---------------------------------------------------------
+    # 4. SINCRONIZAÇÃO DE FILTROS E VÍNCULOS DE EMPRESA
+    # ---------------------------------------------------------
+    # O sistema Maxdata moderno requer que o cliente esteja vinculado à empresa 
+    # nas tabelas `cliente_empresa` e `empresaFiltro` para exibir o Código na tela.
+    print("Sincronizando vínculos de empresa (cliente_empresa e empresaFiltro)...")
+    
+    sql_cliente_empresa = """
+    INSERT INTO cliente_empresa (empId, cliId)
+    SELECT 1, cliId FROM cliente 
+    WHERE cliId NOT IN (SELECT cliId FROM cliente_empresa WHERE empId = 1)
+    """
+    
+    sql_empresa_filtro = """
+    INSERT INTO empresaFiltro (empId, emfTable, emfPkField, emfPkValue, emfDataOcorrencia, emfUsuId)
+    SELECT 1, 'cliente', 'cliId', cliId, GETDATE(), 1 FROM cliente
+    WHERE cliId NOT IN (SELECT emfPkValue FROM empresaFiltro WHERE empId = 1 AND emfTable = 'cliente')
+    """
+    
+    try:
+        db.executar_comando(sql_cliente_empresa)
+        db.executar_comando(sql_empresa_filtro)
+    except Exception as e:
+        print(f"Erro ao sincronizar tabelas de empresa: {e}")
+
     print(f"--- Fim Importação {tipo_str} ---")

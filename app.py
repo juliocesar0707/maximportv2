@@ -271,7 +271,7 @@ class MaxImportApp(ttk.Window):
 
             if opcao == 3 or opcao == 99:
                 print("Limpando Financeiro...")
-                db.limpar_tabela('financeiro')
+                db.limpar_tabela('vendaPgto')
             
             print("--- Limpeza Concluída ---")
             messagebox.showinfo("Sucesso", "Limpeza realizada com sucesso!")

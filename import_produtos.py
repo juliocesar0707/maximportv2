@@ -75,10 +75,10 @@ def executar_importacao(caminho_excel, mapa_colunas, limpar_base=False):
         print("Limpando tabelas...")
         try:
             db.limpar_tabela('prolote', reset_identity=True)
-            db.executar_comando("DELETE FROM produto_empresa")
+            db.limpar_tabela('produto_empresa', reset_identity=True)
             db.executar_comando("DELETE FROM produto WHERE proId > 1") 
             db.executar_comando("DBCC CHECKIDENT ('produto', RESEED, 1)")
-            db.limpar_tabela('produtoUn', reset_identity=True)
+            ##db.limpar_tabela('produtoUn', reset_identity=True)
         except Exception as e:
             print(f"Erro limpeza: {e}")
 
@@ -116,8 +116,8 @@ def executar_importacao(caminho_excel, mapa_colunas, limpar_base=False):
     df_base['proEstoqueMin'] = pegar_valor('zzz_proEstoqueMin', utils.tratar_moeda, valor_padrao=0)
     
     # --- CST e CSOSN (Nomes Corrigidos) ---
-    df_base['proCodcst2'] = pegar_valor('proCodcst2', lambda x: utils.tratar_string(x, 3), valor_padrao='')
-    df_base['proCodCSOSN'] = pegar_valor('proCodCSOSN', lambda x: utils.tratar_string(x, 4), valor_padrao='')
+    df_base['proCodcst2'] = pegar_valor('proCodcst2', lambda x: utils.tratar_string(x, 2), valor_padrao='')
+    df_base['proCodCSOSN'] = pegar_valor('proCodCSOSN', lambda x: utils.tratar_string(x, 3), valor_padrao='')
 
     df_base['proCodigoEmpresa'] = df_base['zzz_proCodigo'] 
 

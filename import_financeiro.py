@@ -19,7 +19,7 @@ def executar_importacao(caminho_excel, limpar_base=False):
     if limpar_base:
         # CUIDADO: Isso apaga todo o histórico financeiro
         print("Limpando tabela FINANCEIRO...")
-        db.executar_comando("DELETE FROM financeiro")
+        db.executar_comando("DELETE FROM vendaPgto")
         # Se tiver tabela filha (ex: financeiro_baixa), limpar aqui também
 
     df_fin = pd.DataFrame()
@@ -84,6 +84,6 @@ def executar_importacao(caminho_excel, limpar_base=False):
     df_fin = df_fin[df_fin['pgtClienteId'] > 0]
     df_fin = df_fin[df_fin['pgtVecmto'].notnull()]
 
-    db.inserir_bulk(df_fin, 'financeiro', manter_id=False)
+    db.inserir_bulk(df_fin, 'vendaPgto', manter_id=False)
 
     print("--- Fim Importação Financeira ---")
