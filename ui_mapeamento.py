@@ -45,7 +45,8 @@ class DialogoMapeamento(ttk.Toplevel):
         if tipo_importacao == "PRODUTO":
             self.campos_sistema = {
                 'proId': 'ID Produto (Fixo ou Automático)',
-                'zzz_proCodigo': 'Referência / Código de Barras',
+                'zzz_proCodigo': 'Referência / Cód. Fabricante',
+                'cdbCodigo': 'Código de Barras (EAN/GTIN)',
                 'proDescricao': 'Descrição do Produto',
                 'zzz_proCodigoNcm': 'NCM (Código Fiscal)',
                 'proUn': 'Unidade (UN, KG, CX)',
@@ -123,7 +124,8 @@ class DialogoMapeamento(ttk.Toplevel):
                 if nm_db == nm_ex: match = True
                 
                 # Produto
-                if campo_db == 'zzz_proCodigo' and nm_ex in ['referencia', 'ref', 'codigo', 'barras', 'cod']: match = True
+                if campo_db == 'zzz_proCodigo' and nm_ex in ['referencia', 'ref', 'codigo', 'cod', 'fabricante']: match = True
+                if campo_db == 'cdbCodigo' and nm_ex in ['barras', 'ean', 'gtin', 'codigo de barras', 'cod barras', 'cod. barras']: match = True
                 if campo_db == 'proDescricao' and nm_ex in ['nome', 'descricao', 'descrição', 'produto']: match = True
                 if 'custo' in nm_db and 'custo' in nm_ex: match = True
                 if 'venda' in nm_db and 'venda' in nm_ex: match = True

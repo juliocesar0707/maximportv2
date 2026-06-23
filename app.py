@@ -34,9 +34,9 @@ class TextRedirector(io.StringIO):
 # --- APP PRINCIPAL ---
 class MaxImportApp(ttk.Window):
     def __init__(self):
-        # MUDANÇA VISUAL: Tema 'superhero' (Dark Moderno) ou 'flatly' (Clean Light)
-        # Vamos usar 'superhero' para o visual "Super Bonito" e Tech.
-        super().__init__(themename="superhero") 
+        # Tema darkly: Fundo cinza escuro (#222222) com textos em branco.
+        super().__init__(themename="darkly") 
+        
         self.title("Max Import 2.0 - Suite de Migração")
         self.geometry("1024x800")
         self.place_window_center()
@@ -59,16 +59,17 @@ class MaxImportApp(ttk.Window):
 
     def criar_interface(self):
         # --- HEADER ---
-        header = ttk.Frame(self, padding=20, bootstyle="secondary")
+        # Header Vermelho Escuro (Danger no darkly)
+        header = ttk.Frame(self, padding=20, bootstyle="danger")
         header.pack(fill=X)
         
         # Layout Flexível no Header
-        h_container = ttk.Frame(header, bootstyle="secondary")
+        h_container = ttk.Frame(header, bootstyle="danger")
         h_container.pack(fill=X)
         
-        ttk.Label(h_container, text="MAX IMPORT", font=("Segoe UI", 24, "bold"), bootstyle="inverse-secondary").pack(side=LEFT)
-        ttk.Label(h_container, text=" | Ferramenta de Migração Inteligente", font=("Segoe UI", 14), bootstyle="inverse-secondary").pack(side=LEFT, pady=(8,0))
-        ttk.Label(h_container, text="v2.0", font=("Consolas", 10), bootstyle="inverse-secondary").pack(side=RIGHT, pady=(10,0))
+        ttk.Label(h_container, text="MAX IMPORT", font=("Segoe UI", 24, "bold"), bootstyle="inverse-danger").pack(side=LEFT)
+        ttk.Label(h_container, text=" | Ferramenta de Migração Inteligente", font=("Segoe UI", 14), bootstyle="inverse-danger").pack(side=LEFT, pady=(8,0))
+        ttk.Label(h_container, text="v2.0", font=("Consolas", 10), bootstyle="inverse-danger").pack(side=RIGHT, pady=(10,0))
 
         # --- CONTAINER PRINCIPAL ---
         # Adicionei um padding maior para o conteúdo "respirar"
@@ -76,8 +77,8 @@ class MaxImportApp(ttk.Window):
         main_frame.pack(fill=BOTH, expand=True)
 
         # --- SEÇÃO 1: CONEXÃO (Card Style) ---
-        # Labelframe com estilo 'info' para destacar a borda
-        frame_db = ttk.Labelframe(main_frame, text=" 📡 Conectividade ", padding=15, bootstyle="info")
+        # Labelframe com estilo 'danger' (vermelho escuro) para destacar a borda
+        frame_db = ttk.Labelframe(main_frame, text=" 📡 Conectividade ", padding=15, bootstyle="danger")
         frame_db.pack(fill=X, pady=(0, 15))
 
         # Grid interno para alinhar campos
@@ -86,39 +87,39 @@ class MaxImportApp(ttk.Window):
         frame_db.columnconfigure(2, weight=0)
 
         # Campo Servidor
-        lbl_srv = ttk.Label(frame_db, text="SERVIDOR SQL", font=("Segoe UI", 8, "bold"), bootstyle="info")
+        lbl_srv = ttk.Label(frame_db, text="SERVIDOR SQL", font=("Segoe UI", 8, "bold"))
         lbl_srv.grid(row=0, column=0, sticky=W, padx=5)
         
         inp_srv_frame = ttk.Frame(frame_db)
         inp_srv_frame.grid(row=1, column=0, sticky=EW, padx=5, pady=(5,0))
         
         ttk.Entry(inp_srv_frame, textvariable=self.db_server, font=("Segoe UI", 10)).pack(side=LEFT, fill=X, expand=True)
-        ttk.Button(inp_srv_frame, text="🔍", bootstyle="info-outline", command=self.listar_bancos_gui).pack(side=RIGHT, padx=(5,0))
+        ttk.Button(inp_srv_frame, text="🔍", bootstyle="danger-outline", command=self.listar_bancos_gui).pack(side=RIGHT, padx=(5,0))
 
         # Campo Banco
-        lbl_db = ttk.Label(frame_db, text="BANCO DE DADOS", font=("Segoe UI", 8, "bold"), bootstyle="info")
+        lbl_db = ttk.Label(frame_db, text="BANCO DE DADOS", font=("Segoe UI", 8, "bold"))
         lbl_db.grid(row=0, column=1, sticky=W, padx=5)
         
         self.cbo_bancos = ttk.Combobox(frame_db, textvariable=self.db_name, state="normal", font=("Segoe UI", 10))
         self.cbo_bancos.grid(row=1, column=1, sticky=EW, padx=5, pady=(5,0))
 
         # Botão Conectar
-        btn_conectar = ttk.Button(frame_db, text="💾 SALVAR & CONECTAR", command=self.atualizar_conexao, bootstyle="info", width=20)
+        btn_conectar = ttk.Button(frame_db, text="💾 SALVAR & CONECTAR", command=self.atualizar_conexao, bootstyle="danger", width=20)
         btn_conectar.grid(row=1, column=2, padx=10, pady=(5,0), ipady=2)
 
         # --- SEÇÃO 2: ARQUIVO (Card Style) ---
-        frame_file = ttk.Labelframe(main_frame, text=" 📂 Origem dos Dados ", padding=15, bootstyle="primary")
+        frame_file = ttk.Labelframe(main_frame, text=" 📂 Origem dos Dados ", padding=15, bootstyle="danger")
         frame_file.pack(fill=X, pady=(0, 15))
 
         file_container = ttk.Frame(frame_file)
         file_container.pack(fill=X)
 
         ttk.Entry(file_container, textvariable=self.caminho_excel, state="readonly", font=("Segoe UI", 10)).pack(side=LEFT, fill=X, expand=True, padx=(0, 10))
-        ttk.Button(file_container, text="SELECIONAR EXCEL", command=self.selecionar_arquivo, bootstyle="primary-outline", cursor="hand2").pack(side=RIGHT)
+        ttk.Button(file_container, text="SELECIONAR EXCEL", command=self.selecionar_arquivo, bootstyle="danger-outline", cursor="hand2").pack(side=RIGHT)
 
         # --- SEÇÃO 3: DASHBOARD DE AÇÕES ---
         # Substituí o Grid simples por um layout mais visual
-        frame_acoes = ttk.Labelframe(main_frame, text=" 🚀 Painel de Controle ", padding=15, bootstyle="light")
+        frame_acoes = ttk.Labelframe(main_frame, text=" 🚀 Painel de Controle ", padding=15, bootstyle="danger")
         frame_acoes.pack(fill=X, pady=(0, 15))
 
         # Container interno para centralizar botões
@@ -129,24 +130,24 @@ class MaxImportApp(ttk.Window):
         for i in range(4): grid_acoes.columnconfigure(i, weight=1)
         grid_acoes.columnconfigure(4, weight=0) # Separador
         grid_acoes.columnconfigure(5, weight=1) # Limpeza
-
-        # Botões Grandes e Coloridos
-        btn_prod = ttk.Button(grid_acoes, text=" PRODUTOS", image="", compound=LEFT, bootstyle="success", style='Big.TButton', command=lambda: self.preparar_importacao(1))
+        
+        # Botões Grandes (Danger = Vermelho Maxdata no Dark Theme)
+        btn_prod = ttk.Button(grid_acoes, text=" PRODUTOS", image="", compound=LEFT, bootstyle="danger", style='Big.TButton', command=lambda: self.preparar_importacao(1))
         btn_prod.grid(row=0, column=0, padx=5, sticky=EW, ipady=10)
 
-        btn_cli = ttk.Button(grid_acoes, text=" CLIENTES", bootstyle="primary", style='Big.TButton', command=lambda: self.preparar_importacao(2))
+        btn_cli = ttk.Button(grid_acoes, text=" CLIENTES", bootstyle="danger", style='Big.TButton', command=lambda: self.preparar_importacao(2))
         btn_cli.grid(row=0, column=1, padx=5, sticky=EW, ipady=10)
 
-        btn_forn = ttk.Button(grid_acoes, text=" FORNECEDORES", bootstyle="warning", style='Big.TButton', command=lambda: self.preparar_importacao(3))
+        btn_forn = ttk.Button(grid_acoes, text=" FORNECEDORES", bootstyle="danger", style='Big.TButton', command=lambda: self.preparar_importacao(3))
         btn_forn.grid(row=0, column=2, padx=5, sticky=EW, ipady=10)
 
-        btn_fin = ttk.Button(grid_acoes, text=" FINANCEIRO", bootstyle="info", style='Big.TButton', command=lambda: self.preparar_importacao(4))
+        btn_fin = ttk.Button(grid_acoes, text=" FINANCEIRO", bootstyle="danger", style='Big.TButton', command=lambda: self.preparar_importacao(4))
         btn_fin.grid(row=0, column=3, padx=5, sticky=EW, ipady=10)
 
         # Separador Vertical
-        ttk.Separator(grid_acoes, orient=VERTICAL).grid(row=0, column=4, sticky=NS, padx=15)
+        ttk.Separator(grid_acoes, orient=VERTICAL).grid(row=0, column=4, sticky=NS, padx=10)
 
-        # Botão de Perigo
+        # Botão de Perigo (Mantido Danger-Outline para destaque diferente)
         btn_limpar = ttk.Button(grid_acoes, text=" MANUTENÇÃO", bootstyle="danger-outline", style='Big.TButton', command=self.abrir_menu_limpeza)
         btn_limpar.grid(row=0, column=5, padx=5, sticky=EW, ipady=10)
 
@@ -158,15 +159,15 @@ class MaxImportApp(ttk.Window):
         lbl_log = ttk.Label(frame_log, text="> Console de Execução", font=("Consolas", 10, "bold"), bootstyle="secondary")
         lbl_log.pack(anchor=W, pady=(0, 5))
 
-        # Texto com fundo escuro (automático do tema superhero) e fonte verde/branca
-        self.txt_log = ttk.Text(frame_log, height=10, font=("Consolas", 9), relief=FLAT, padx=10, pady=10)
+        # Texto com fundo cinza escuro para remeter a console
+        self.txt_log = ttk.Text(frame_log, height=10, font=("Consolas", 9), relief=FLAT, padx=10, pady=10, bg="#2b2b2b", fg="#00ff00")
         self.txt_log.pack(fill=BOTH, expand=True)
         
         # Redireciona print para o widget
         sys.stdout = TextRedirector(self.txt_log)
 
-        # Barra de Progresso Striped (Listrada)
-        self.barra_progresso = ttk.Progressbar(main_frame, variable=self.progress_val, bootstyle="success-striped", mode='indeterminate')
+        # Barra de Progresso Striped (Listrada) em Vermelho
+        self.barra_progresso = ttk.Progressbar(main_frame, variable=self.progress_val, bootstyle="danger-striped", mode='indeterminate')
         self.barra_progresso.pack(fill=X, pady=(15, 5), ipady=2)
         
         # Footer
@@ -260,6 +261,7 @@ class MaxImportApp(ttk.Window):
             if opcao == 1 or opcao == 99:
                 print("Limpando Produtos e Estoque...")
                 db.limpar_tabela('prolote', reset_identity=True)
+                db.executar_comando("DELETE FROM codBarras") 
                 db.executar_comando("DELETE FROM produto_empresa") 
                 db.executar_comando("DELETE FROM produto WHERE proId > 1") 
                 db.limpar_tabela('produtoUn', reset_identity=True)

@@ -3,7 +3,7 @@ import urllib.parse
 
 # CONFIGURAÇÕES DO SQL SERVER (DESTINO)
 DB_SERVER = 'LOCALHOST'  # Ou nome do servidor da Maxdata
-DB_NAME = 'centerf'  # Nome do banco de dados
+DB_NAME = ''  # Nome do banco de dados
 DB_USER = 'sa'
 DB_PASS = 'macro01'
 

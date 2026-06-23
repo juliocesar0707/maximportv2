@@ -3,6 +3,9 @@ from sqlalchemy import create_engine, text
 import config
 import urllib.parse
 import pyodbc
+import os
+import pandas as pd
+from datetime import datetime
 
 # Variável global da conexão
 engine = None
@@ -142,5 +145,47 @@ def inserir_bulk(df, nome_tabela, manter_id=True):
             print(f"Importado: {len(df)} registros em {nome_tabela}")
         except Exception as e:
             transaction.rollback()
-            print(f"ERRO AO INSERIR EM {nome_tabela}: {e}")
-            raise e
+            print(f"Erro no bulk insert em {nome_tabela}. Tentando recuperação linha a linha para capturar erros...")
+            _inserir_linha_a_linha(df, nome_tabela, manter_id)
+
+def _inserir_linha_a_linha(df, nome_tabela, manter_id):
+    erros = []
+    sucesso_count = 0
+    with get_engine().connect() as conn:
+        if manter_id:
+            try:
+                conn.execute(text(f"SET IDENTITY_INSERT {nome_tabela} ON"))
+            except:
+                pass
+            
+        for index, row in df.iterrows():
+            transaction = conn.begin()
+            try:
+                # Insere apenas uma linha
+                pd.DataFrame([row]).to_sql(nome_tabela, con=conn, if_exists='append', index=False)
+                transaction.commit()
+                sucesso_count += 1
+            except Exception as e:
+                transaction.rollback()
+                linha_com_erro = row.to_dict()
+                # Salva o texto do erro até 500 caracteres para ficar claro
+                linha_com_erro['_erro_banco'] = str(e).split('\n')[0][:500]
+                erros.append(linha_com_erro)
+                
+        if manter_id:
+            try:
+                conn.execute(text(f"SET IDENTITY_INSERT {nome_tabela} OFF"))
+            except:
+                pass
+            
+    print(f"Resumo da recuperação em {nome_tabela}: {sucesso_count} linhas salvas, {len(erros)} falhas.")
+    
+    if erros:
+        # Gera arquivo Excel de log
+        df_erros = pd.DataFrame(erros)
+        os.makedirs("logs", exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        arquivo_erro = f"logs/erros_{nome_tabela}_{timestamp}.xlsx"
+        df_erros.to_excel(arquivo_erro, index=False)
+        print(f"🚨 ATENÇÃO: {len(erros)} registros não puderam ser importados.")
+        print(f"🚨 LOG SALVO EM: {arquivo_erro} para correção no Excel e reimportação.")

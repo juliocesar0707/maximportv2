@@ -76,6 +76,7 @@ def executar_importacao(caminho_excel, mapa_colunas, limpar_base=False):
         try:
             db.limpar_tabela('prolote', reset_identity=True)
             db.limpar_tabela('produto_empresa', reset_identity=True)
+            db.limpar_tabela('codBarras', reset_identity=True)
             db.executar_comando("DELETE FROM produto WHERE proId > 1") 
             db.executar_comando("DBCC CHECKIDENT ('produto', RESEED, 1)")
             ##db.limpar_tabela('produtoUn', reset_identity=True)
@@ -94,9 +95,12 @@ def executar_importacao(caminho_excel, mapa_colunas, limpar_base=False):
 
     df_base = pd.DataFrame()
     
-    # Campos Universais
-    df_base['proDescricao'] = pegar_valor('proDescricao', lambda x: utils.tratar_string(x, 50))
-    df_base['zzz_proCodigo'] = pegar_valor('zzz_proCodigo', lambda x: utils.tratar_string(x, 20))
+    # Mapeando colunas baseadas no mapa fornecido
+    df_base['proDescricao'] = pegar_valor('proDescricao', lambda x: utils.tratar_string(x, 100))
+    df_base['zzz_proCodigo'] = pegar_valor('zzz_proCodigo', lambda x: utils.tratar_string(x, 50))
+    df_base['cdbCodigo'] = pegar_valor('cdbCodigo', lambda x: utils.tratar_string(x, 20), valor_padrao='')
+
+    
     
     # NCM: Lemos o CÓDIGO do Excel para uma coluna temporária
     df_base['zzz_proCodigoNcm'] = pegar_valor('zzz_proCodigoNcm', lambda x: utils.tratar_string(utils.remove_char(x), 8))
@@ -139,7 +143,7 @@ def executar_importacao(caminho_excel, mapa_colunas, limpar_base=False):
     if not df_fixo.empty:
         df_fixo['proId'] = ids_numericos[mask_numerico].astype(int)
         
-        # Ajuste: Inserimos 'proncmid'
+        # Ajuste: Inserimos 'proncmid' 
         df_prod_fixo = df_fixo[['proId', 'proDescricao', 'zzz_proCodigo', 'proncmid']].copy()
         
         print(f"Inserindo {len(df_prod_fixo)} produtos FIXOS...")
@@ -150,13 +154,20 @@ def executar_importacao(caminho_excel, mapa_colunas, limpar_base=False):
         df_emp_fixo.rename(columns={'proCodigoEmpresa': 'proCodigo'}, inplace=True)
         df_emp_fixo['empId'] = 1 
         db.inserir_bulk(df_emp_fixo, 'produto_empresa', manter_id=False)
+        
+        # --- TABELA DE CÓDIGO DE BARRAS ---
+        df_codbarras_fixo = df_fixo[['proId', 'cdbCodigo']].copy()
+        df_codbarras_fixo = df_codbarras_fixo[df_codbarras_fixo['cdbCodigo'] != '']
+        if not df_codbarras_fixo.empty:
+            df_codbarras_fixo.rename(columns={'proId': 'cdbIdProd'}, inplace=True)
+            db.inserir_bulk(df_codbarras_fixo, 'codBarras', manter_id=False)
 
     # --- GRUPO 2: IDs AUTOMÁTICOS ---
     df_auto = df_base[~mask_numerico].copy()
     if not df_auto.empty:
         df_auto['zzz_proCodigo'] = df_auto['zzz_proCodigo'].replace('', 'AUTO_' + df_auto.index.astype(str))
         
-        # Ajuste: Inserimos 'proncmid'
+        # Ajuste: Inserimos 'proncmid' 
         df_prod_auto = df_auto[['proDescricao', 'zzz_proCodigo', 'proncmid']].copy()
         
         print(f"Inserindo {len(df_prod_auto)} produtos AUTOMÁTICOS...")
@@ -175,6 +186,14 @@ def executar_importacao(caminho_excel, mapa_colunas, limpar_base=False):
                 df_emp_auto['empId'] = 1
                 
                 db.inserir_bulk(df_emp_auto, 'produto_empresa', manter_id=False)
+                
+                # --- TABELA DE CÓDIGO DE BARRAS ---
+                df_codbarras_auto = df_auto_final[['proId', 'cdbCodigo']].copy()
+                df_codbarras_auto = df_codbarras_auto[df_codbarras_auto['cdbCodigo'] != '']
+                if not df_codbarras_auto.empty:
+                    df_codbarras_auto.rename(columns={'proId': 'cdbIdProd'}, inplace=True)
+                    db.inserir_bulk(df_codbarras_auto, 'codBarras', manter_id=False)
+                    
             except Exception as e:
                 print(f"Erro ao sincronizar IDs automáticos: {e}")
 
